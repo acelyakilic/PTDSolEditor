@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pygame pyinstaller pyperclip
+          pip install pygame pyperclip pyinstaller Pillow
       - name: Build for Windows
         if: runner.os == 'Windows'
         run: |
