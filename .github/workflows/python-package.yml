@@ -1,0 +1,74 @@
+name: Build and Release PTDSolEditor
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pygame pyperclip
+      - name: Build for Windows
+        if: runner.os == 'Windows'
+        run: |
+          pyinstaller --onefile --windowed --icon=resources/favicon-original.ico `
+            --add-data "resources/favicon-original.ico;resources" `
+            sol_viewer.py
+          mv dist/sol_viewer.exe dist/PTDSolEditor-Windows.exe
+      - name: Build for Linux
+        if: runner.os == 'Linux'
+        run: |
+          pyinstaller --onefile --windowed --icon=resources/favicon-original.ico \
+            --add-data "resources/favicon-original.ico:resources" \
+            sol_viewer.py
+          mv dist/sol_viewer dist/PTDSolEditor-Linux
+      - name: Build for macOS
+        if: runner.os == 'macOS'
+        run: |
+          pyinstaller --onefile --windowed --icon=resources/favicon-original.ico \
+            --add-data "resources/favicon-original.ico:resources" \
+            sol_viewer.py
+          mv dist/sol_viewer dist/PTDSolEditor-macOS
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PTDSolEditor-${{ runner.os }}
+          path: dist/PTDSolEditor*
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: List files in artifacts directory
+        run: find artifacts -type f | sort
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          tag_name: v1.0.${{ github.run_number }}
+          name: "PTDSolEditor Release v1.0.${{ github.run_number }}"
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/PTDSolEditor-Windows/PTDSolEditor-Windows.exe
+            artifacts/PTDSolEditor-Linux/PTDSolEditor-Linux
+            artifacts/PTDSolEditor-macOS/PTDSolEditor-macOS
